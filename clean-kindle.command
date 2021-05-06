@@ -1,0 +1,1 @@
+python3 /Users/nik/Documents/Code/clean-kindle/clean-kindle.py
