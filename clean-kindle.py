@@ -21,47 +21,76 @@ from bs4 import BeautifulSoup
 
 # Footnote markers the book uses after words (Alamak*, giam siap§, ...)
 FOOTNOTE_MARKS = "*†‡§‖¶"
-# Punctuation left dangling at the edges when a highlight starts or stops mid-sentence
-EDGE_JUNK_START = ",;:—–-…. "
-EDGE_JUNK_END = ",;:—–- "
+SENTENCE_ENDERS = ".?!"
+OPENERS = "([{"
+CLOSERS = ")]}"
 
 
-def fix_quotes(text):
-	"""Pair up double quotes; drop the ones cut off by the highlight's edges.
+def quote_marks(text):
+	"""Find quote marks as (index, kind, is_opening). kind is 'double' or 'single'.
 
-	Paired quotes inside the highlight become single quotes so they don't clash
-	with the double quotes added around the whole highlight. A pair wrapping the
-	entire highlight is removed, since the outer quotes replace it.
+	A ’ only counts as a closing single quote when a ‘ is open and the ’ isn't
+	inside a word, so apostrophes (he’s, Joneses’ house) are left alone.
 	"""
-	marks = []  # (index, is_opening)
+	marks, singles_open = [], 0
 	for i, c in enumerate(text):
+		before = text[i - 1] if i else " "
+		after = text[i + 1] if i + 1 < len(text) else " "
 		if c in "“„":
-			marks.append((i, True))
+			marks.append((i, "double", True))
 		elif c == "”":
-			marks.append((i, False))
+			marks.append((i, "double", False))
 		elif c == '"':
-			before = text[i - 1] if i else " "
-			marks.append((i, before in " (—["))
+			marks.append((i, "double", not before.isalnum() and before not in SENTENCE_ENDERS + ",;:"))
+		elif c == "‘":
+			marks.append((i, "single", True))
+			singles_open += 1
+		elif c == "’" and singles_open and not after.isalpha():
+			marks.append((i, "single", False))
+			singles_open -= 1
+	return marks
 
-	stack, pairs, drop = [], {}, set()
-	for i, opening in marks:
+
+def fix_pairs(text):
+	"""Drop quote marks and brackets that lost their partner.
+
+	Highlights start and stop mid-sentence, so they often keep one half of a
+	pair ("Alamak,  or  Beverly Hills).). Matched quotes are restyled for
+	nesting inside the outer quotes added around the whole highlight: first
+	level single, second level double, and so on.
+	"""
+	marks = [(i, kind, opening) for i, kind, opening in quote_marks(text)]
+	marks += [(i, c, True) for i, c in enumerate(text) if c in OPENERS]
+	marks += [(i, OPENERS[CLOSERS.index(c)], False) for i, c in enumerate(text) if c in CLOSERS]
+	marks.sort()
+
+	stack, pairs, drop = [], [], set()
+	for i, kind, opening in marks:
 		if opening:
-			stack.append(i)
-		elif stack:
-			pairs[stack.pop()] = i
+			stack.append((i, kind))
+		elif stack and stack[-1][1] == kind:
+			pairs.append((stack.pop()[0], i, kind))
+		elif any(k == kind for _, k in stack):
+			# Close the matching opener; anything opened inside it was cut off
+			while stack[-1][1] != kind:
+				drop.add(stack.pop()[0])
+			pairs.append((stack.pop()[0], i, kind))
 		else:
 			drop.add(i)
-	drop.update(stack)
+	drop.update(i for i, _ in stack)
 
-	if pairs.get(0) == len(text) - 1:
-		drop.update((0, len(text) - 1))
+	# A quote wrapping the whole highlight is replaced by the outer quotes
+	for open_, close, kind in pairs:
+		if kind in ("double", "single") and open_ == 0 and close == len(text) - 1:
+			drop.update((open_, close))
 
-	opens = set(pairs) - drop
-	closes = set(pairs.values()) - drop
-	return "".join(
-		"" if i in drop else "‘" if i in opens else "’" if i in closes else c
-		for i, c in enumerate(text)
-	)
+	replace = {i: "" for i in drop}
+	quote_pairs = sorted((o, c) for o, c, k in pairs if k in ("double", "single") and o not in drop)
+	for open_, close in quote_pairs:
+		depth = sum(1 for o, c in quote_pairs if o < open_ and close < c)
+		replace[open_], replace[close] = ("‘", "’") if depth % 2 == 0 else ("“", "”")
+
+	return "".join(replace.get(i, c) for i, c in enumerate(text))
 
 
 def clean_highlight(text):
@@ -71,17 +100,18 @@ def clean_highlight(text):
 	text = text.translate(str.maketrans("", "", FOOTNOTE_MARKS))
 	text = re.sub(r"([.!?,’”\"])[a-z]$", r"\1", text)
 
-	text = fix_quotes(text)
+	text = fix_pairs(text).strip()
 
-	# Dangling punctuation at the edges ("—Indonesia—", "school,")
-	text = text.lstrip(EDGE_JUNK_START).rstrip(EDGE_JUNK_END)
+	# Every pair left is complete, so the only things allowed at the edges are
+	# letters/digits, sentence enders at the end, and the halves of real pairs.
+	ok_start = set(OPENERS + "‘“")
+	ok_end = set(SENTENCE_ENDERS + CLOSERS + "’”")
+	while text and not (text[0].isalnum() or text[0] in ok_start):
+		text = text[1:].lstrip()
+	while text and not (text[-1].isalnum() or text[-1] in ok_end):
+		text = text[:-1].rstrip()
 
-	# Unmatched brackets from cutting a sentence ("Beverly Hills).")
-	for open_, close in ("()", "[]"):
-		if text.count(open_) != text.count(close):
-			text = text.replace(open_, "").replace(close, "")
-
-	return f'"{text.strip()}"'
+	return f'"{text}"'
 
 
 def clean_note(text):
