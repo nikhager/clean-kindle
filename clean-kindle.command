@@ -1,1 +1,2 @@
-python3 /Users/nik/Documents/Code/clean-kindle/clean-kindle.py
+#!/bin/bash
+cd "$(dirname "$0")" && python3 clean-kindle.py "$@"

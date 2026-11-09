@@ -1,4 +1,6 @@
 import re
+import sys
+from pathlib import Path
 from bs4 import BeautifulSoup
 
 def RemoveHighlights(soup):
@@ -10,8 +12,10 @@ def NotesToBullets(soup):
 		tag.name = 'ul'
 
 def main():
-	file = input('file: ')
-	clean = "/Users/nik/Desktop/clean-highlights.html"
+	# Input file: first command-line argument, or ask for it
+	file = sys.argv[1] if len(sys.argv) > 1 else input('file: ').strip().strip("'\"")
+	# Output goes on the Desktop of whoever runs it
+	clean = Path.home() / "Desktop" / "clean-highlights.html"
 
 	with open(file) as inf:
 		txt = inf.read()
@@ -22,7 +26,7 @@ def main():
 	with open(clean, "w") as outf:
 		outf.write(re.sub(r'\s([?.,!"](?:\s|$))', r'\1', str(soup.prettify())))
 
-	print("Done")
+	print(f"Done: {clean}")
 
 
 if __name__ == '__main__':
