@@ -19,7 +19,6 @@
             "Bash(git push *)",
             "Bash(curl *)",
             "Bash(wget *)",
-            "WebFetch",
             "Bash(npm publish *)",
             "Bash(wrangler deploy*)",
             "Bash(gh pr create *)"
