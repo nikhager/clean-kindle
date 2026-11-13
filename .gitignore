@@ -2,3 +2,11 @@
 .DS_Store
 # Kindle notebook exports waiting to be cleaned (input data)
 queue/
+
+# Secrets (security schema §7)
+.env
+.env.local
+.env.production
+.env.*.local
+.dev.vars
+!.env.example
