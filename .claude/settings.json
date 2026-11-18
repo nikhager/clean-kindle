@@ -1,6 +1,19 @@
 {
+    "disableClaudeAiConnectors": true,
     "permissions": {
         "deny": [
+            "mcp__claude_ai_*",
+            "mcp__Gmail__*",
+            "mcp__Google_*",
+            "mcp__Notion__*",
+            "mcp__Supabase*",
+            "mcp__Todoist__*",
+            "mcp__Claude_Docs__*",
+            "mcp__memory__*",
+            "mcp__remote-devices__*",
+            "mcp__claude-in-chrome__*",
+            "mcp__claude-device__*",
+            "mcp__plugin_*",
             "Read(**/.env)",
             "Read(**/.env.local)",
             "Read(**/.env.production)",
@@ -12,16 +25,31 @@
             "Bash(git clean -f*)",
             "Bash(git push --force *)",
             "Bash(git push -f *)",
+            "Bash(git push --force*)",
+            "Bash(git push * --force*)",
+            "Bash(git push * -f)",
+            "Bash(git push * -f *)",
+            "Bash(git push +*)",
+            "Bash(git push * +*)",
             "Bash(rm -rf *)",
             "Bash(supabase db reset*)"
         ],
         "ask": [
-            "Bash(git push *)",
+            "Edit(/.github/**)",
+            "Write(/.github/**)",
+            "Bash(git push)",
+            "Bash(git push origin)",
+            "Bash(git push * main)",
+            "Bash(git push * main *)",
+            "Bash(git push *:main*)",
+            "Bash(git push *:refs/heads/main*)",
+            "Bash(git push * --delete *)",
+            "Bash(git push --delete *)",
+            "Bash(git push * :*)",
             "Bash(curl *)",
             "Bash(wget *)",
             "Bash(npm publish *)",
-            "Bash(wrangler deploy*)",
-            "Bash(gh pr create *)"
+            "Bash(wrangler deploy*)"
         ]
     }
 }
